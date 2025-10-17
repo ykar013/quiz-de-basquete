@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Quiz de basquete — Quiz </title>
+  <style>
+    :root{
+      --bg:#f97316;
+      --card:#111;
+      --accent:#ffb84d;
+      --text:#fff;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;overflow-x:hidden;}
+    .app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:18px;box-sizing:border-box}
+    header{display:flex;align-items:center;gap:12px}
+    .logo{font-weight:700;font-size:22px;letter-spacing:0.6px}
+    .court{flex:1;margin-top:12px;transition:opacity 0.4s ease;}
+    .fade-out{opacity:0;}
+    .card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+    .question{font-size:18px;margin-bottom:12px;transition:opacity 0.4s ease;}
+    .choices{display:grid;gap:10px;transition:opacity 0.4s ease;}
+    button.choice{background:#222;border:1px solid #333;padding:12px;border-radius:10px;text-align:left;font-size:16px;color:var(--text);transition:background 0.2s,transform 0.1s;}
+    button.choice:hover{background:#333;}
+    button.choice:active{transform:translateY(1px)}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:14px;}
+    .score{background:#222;padding:8px 10px;border-radius:999px;font-weight:600}
+    .big-btn{display:inline-block;background:var(--accent);color:#000;padding:12px 18px;border-radius:28px;font-weight:800;border:none;box-shadow:0 6px 18px rgba(0,0,0,0.4);transition:transform 0.2s}
+    .big-btn:active{transform:translateY(1px)}
+    .hidden{display:none}
+    .small{font-size:13px;opacity:0.8}
+    .fall-wrap{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:hidden;z-index:6}
+    .ball{position:absolute;font-size:22px;will-change:transform,opacity}
+  </style>
+</head>
+<body>
+  <div class="fall-wrap" id="fallWrap"></div>
+  <div class="app">
+    <header>
+      <div style="width:48px;height:48px;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;font-size:24px">🏀</div>
+      <div>
+        <div class="logo">Quiz Basquete</div>
+        <div class="small">20 perguntas — alternativas — objetivo: marcar 5 pontos</div>
+      </div>
+    </header>
+
+    <main class="court" id="court">
+      <div class="card" id="card">
+        <div class="question" id="question">Carregando perguntas...</div>
+        <div class="choices" id="choices"></div>
+        <div class="meta">
+          <div><span id="qIndex">0</span>/<span id="qTotal">20</span></div>
+          <div class="score">Score: <strong id="score">0</strong>/5</div>
+        </div>
+        <div style="margin-top:12px;text-align:center">
+          <button class="big-btn hidden" id="winBtn">🏀 Clique aqui</button>
+          <div id="feedback" class="small"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const QUESTIONS = [
+      {q:'Quantos jogadores de cada time estão em quadra no basquete?',choices:['4','5','6','7'],a:1},
+      {q:'Qual jogada ocorre quando o jogador salta e enterra a bola?',choices:['Arremesso','Bandeja','Enterrada','Passe'],a:2},
+      {q:'Quantos pontos vale um arremesso atrás da linha de 3 pontos?',choices:['1','2','3','4'],a:2},
+      {q:'Quanto tempo dura um quarto na NBA?',choices:['8 min','10 min','12 min','15 min'],a:2},
+      {q:'Apelido de Michael Jordan?',choices:['King James','Air Jordan','Black Mamba','The Answer'],a:1},
+      {q:'O que é um assist?',choices:['Falta','Passe para cesta','Bloqueio','Rebote'],a:1},
+      {q:'Qual equipamento NÃO é usado no basquete?',choices:['Tabela','Cesta','Capacete','Bola'],a:2},
+      {q:'Quantas faltas pessoais um jogador pode cometer na NBA?',choices:['4','5','6','7'],a:2},
+      {q:'Posição do jogador mais alto, próximo da cesta?',choices:['Armador','Ala','Pivô','Ala-armador'],a:2},
+      {q:'O que significa driblar?',choices:['Passar a bola','Quicar a bola','Correr sem bola','Fazer falta'],a:1},
+      {q:'Quem marcou 100 pontos em um jogo da NBA?',choices:['Wilt Chamberlain','Kobe Bryant','LeBron James','Jordan'],a:0},
+      {q:'O que é um bloqueio?',choices:['Roubo de bola','Impedir arremesso','Passe rápido','Rebote'],a:1},
+      {q:'O que é um rebote?',choices:['Recuperar bola após arremesso perdido','Fazer cesta','Falta tática','Passe longo'],a:0},
+      {q:'Cor típica da bola?',choices:['Vermelha','Laranja','Azul','Verde'],a:1},
+      {q:'O que ocorre quando o tempo de ataque expira?',choices:['Nada','Tiro livre','Posse adversária','Prorrogação'],a:2},
+      {q:'País que inventou o basquete?',choices:['Inglaterra','EUA','Canadá','França'],a:2},
+      {q:'O que é um double-double?',choices:['10+ em duas estatísticas','Duas cestas seguidas','20 pontos','Rebote duplo'],a:0},
+      {q:'Quem organiza jogadas?',choices:['Pivô','Ala','Armador','Técnico'],a:2},
+      {q:'Quanto vale um lance livre?',choices:['1 ponto','2 pontos','3 pontos','4 pontos'],a:0},
+      {q:'Quantos períodos tem um jogo de basquete?',choices:['2','3','4','5'],a:2}
+    ];
+
+    const qTotal=20;let index=0,score=0;
+    const elQ=document.getElementById('question'),
+          elC=document.getElementById('choices'),
+          elQI=document.getElementById('qIndex'),
+          elQT=document.getElementById('qTotal'),
+          elS=document.getElementById('score'),
+          elF=document.getElementById('feedback'),
+          btn=document.getElementById('winBtn'),
+          court=document.getElementById('court');
+    elQT.textContent=qTotal;
+
+    function fadeOutIn(callback){
+      court.classList.add('fade-out');
+      setTimeout(()=>{callback();court.classList.remove('fade-out');},400);
+    }
+
+    function render(){
+      if(index>=qTotal){end();return;}
+      const q=QUESTIONS[index];
+      elQ.textContent=q.q;
+      elC.innerHTML='';
+      q.choices.forEach((c,i)=>{
+        const b=document.createElement('button');
+        b.className='choice';
+        b.innerHTML=`${String.fromCharCode(65+i)}) ${c}`;
+        b.onclick=()=>sel(i);
+        elC.appendChild(b);
+      });
+      elQI.textContent=index+1;
+      elF.textContent='';
+    }
+
+    function sel(i){
+      const q=QUESTIONS[index];
+      Array.from(elC.children).forEach(b=>b.disabled=true);
+      if(i===q.a){
+        score++;
+        elS.textContent=score;
+        elF.textContent='Certo!';
+        if(score>=5) btn.classList.remove('hidden');
+      } else elF.textContent='Errou';
+      fadeOutIn(()=>{index++;render();});
+    }
+
+    function end(){
+      elQ.textContent='Fim do Quiz!';
+      elC.innerHTML=`<p>Score final: ${score}/5</p>`;
+    }
+
+    btn.onclick=()=>{window.location.href='https://ykar013.github.io/macarrao-com-merda/';};
+
+    // Mais bolas caindo 🏀
+    const fall=document.getElementById('fallWrap');let balls=[];
+    function spawnBall(){
+      const b=document.createElement('div');
+      b.className='ball';
+      b.textContent='🏀';
+      b.style.left=Math.random()*window.innerWidth+'px';
+      b.style.top='-40px';
+      fall.appendChild(b);
+      balls.push({el:b,y:-40,speed:2+Math.random()*3});
+      setTimeout(()=>b.remove(),7000);
+    }
+    setInterval(spawnBall,400);
+    function anim(){
+      balls.forEach(o=>{
+        o.y+=o.speed;
+        o.el.style.transform=`translateY(${o.y}px)`;
+        if(o.y>window.innerHeight+50){o.el.remove();}
+      });
+      requestAnimationFrame(anim);
+    }
+    anim();
+
+    render();
+  </script>
+</body>
+</html>
